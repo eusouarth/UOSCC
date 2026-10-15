@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const currentPage = window.location.pathname.split('/').pop();
+    if (currentPage === 'login.html' || currentPage === 'publico.html') return;
+
     const sidebarHTML = `
         <aside>
             <div>
@@ -8,18 +11,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
                 <ul class="sidebar-menu">
                     <li class="sidebar-section-title">Visão Geral</li>
-                    <li><a href="dashboard.html" id="menu-dashboard">Painel geral</a></li>
+                    <li><a href="dashboard.html" id="menu-dashboard" data-role-page="dashboard">Painel geral</a></li>
                     
                     <li class="sidebar-section-title">Gestão</li>
-                    <li><a href="financeiro.html" id="menu-financeiro">Recursos</a></li>
-                    <li><a href="metas.html" id="menu-metas">Indicadores</a></li>
-                    <li><a href="evidencias.html" id="menu-evidencias">Evidências</a></li>
-                    <li><a href="projetos.html" id="menu-projetos">Projetos</a></li>
-                    <li><a href="apoiadores.html" id="menu-apoiadores">Apoiadores</a></li>
+                    <li><a href="financeiro.html" id="menu-financeiro" data-role-page="financeiro">Recursos</a></li>
+                    <li><a href="metas.html" id="menu-metas" data-role-page="metas">Indicadores</a></li>
+                    <li><a href="evidencias.html" id="menu-evidencias" data-role-page="evidencias">Evidências</a></li>
+                    <li><a href="projetos.html" id="menu-projetos" data-role-page="projetos">Projetos</a></li>
+                    <li><a href="apoiadores.html" id="menu-apoiadores" data-role-page="apoiadores">Apoiadores</a></li>
                     
                     <li class="sidebar-section-title">Prestação de Contas</li>
-                    <li><a href="relatorios.html" id="menu-relatorios">Relatórios</a></li>
-                    <li><a href="publico.html" id="menu-publico">Página pública</a></li>
+                    <li><a href="relatorios.html" id="menu-relatorios" data-role-page="relatorios">Relatórios</a></li>
+                    <li><a href="publico.html" id="menu-publico" data-role-page="publico">Página pública</a></li>
+                    <li><a href="apoiador.html" id="menu-apoiador" data-role-page="apoiador">Meu apoio</a></li>
+                    <li><a href="contas.html" id="menu-contas" data-role-page="contas">Acessos das OSCs</a></li>
                 </ul>
             </div>
         </aside>
@@ -41,7 +46,6 @@ document.addEventListener("DOMContentLoaded", () => {
         mainContainer.insertAdjacentHTML('afterbegin', topbarHTML);
     }
 
-    const currentPage = window.location.pathname.split('/').pop();
     document.querySelectorAll('.sidebar-menu a').forEach(link => {
         if (link.getAttribute('href') === currentPage) {
             link.classList.add('active');
@@ -50,8 +54,11 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function logout() {
-    if (typeof apiRequest === 'function') {
-        await apiRequest('auth.php?action=logout', 'POST');
+    try {
+        if (typeof apiRequest === 'function') {
+            await apiRequest({ action: 'logout' }, { method: 'POST' });
+        }
+    } finally {
+        window.location.href = 'login.html';
     }
-    window.location.href = 'login.html';
 }
