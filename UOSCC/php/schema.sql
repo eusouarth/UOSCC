@@ -16,6 +16,19 @@ CREATE TABLE IF NOT EXISTS users (
     CONSTRAINT fk_users_supporter FOREIGN KEY (supporter_id) REFERENCES supporters(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS report_notes (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    organization VARCHAR(200) NOT NULL DEFAULT '',
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    narrative TEXT NOT NULL,
+    author_id BIGINT UNSIGNED NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_report_notes_period (organization, period_start, period_end),
+    CONSTRAINT fk_report_notes_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS projects (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(200) NOT NULL,

@@ -32,6 +32,16 @@
                 <button type="button" class="btn" id="exportar-csv">Exportar planilha</button>
                 <button type="button" class="btn" id="exportar-pdf">Exportar PDF</button>
             </form>
+            <form id="report-note-form" class="report-note-form">
+                <label>Título do relatório
+                    <input name="title" type="text" maxlength="200" required>
+                </label>
+                <label>Texto de prestação de contas
+                    <textarea name="narrative" maxlength="50000" rows="6" required></textarea>
+                </label>
+                <p role="status" aria-live="polite"></p>
+                <button type="submit" class="btn">Salvar texto do relatório</button>
+            </form>
             <div id="relatorio-conteudo"
                 style="background: white; padding: 25px; border-radius: 8px; border: 1px solid var(--border-color);">
             </div>

@@ -35,6 +35,17 @@ if ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql') {
         supporter_id INTEGER UNIQUE REFERENCES supporters(id) ON DELETE CASCADE,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )');
+    $pdo->exec('CREATE TABLE IF NOT EXISTS report_notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization TEXT NOT NULL DEFAULT \'\',
+        period_start TEXT NOT NULL,
+        period_end TEXT NOT NULL,
+        title TEXT NOT NULL,
+        narrative TEXT NOT NULL,
+        author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (organization, period_start, period_end)
+    )');
     $pdo->exec('CREATE TABLE IF NOT EXISTS projects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,

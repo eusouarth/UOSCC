@@ -78,6 +78,12 @@ function addAppStyles() {
         .report-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 18px 0; }
         .report-filters label { display: grid; gap: 5px; font-size: .85rem; font-weight: 600; }
         .report-filters input, .report-filters select { min-width: 150px; padding: 9px 10px; border: 1px solid var(--border-color); border-radius: 5px; font: inherit; }
+        .report-note-form { display: grid; gap: 12px; max-width: 760px; margin: 18px 0; padding: 16px 0; border-top: 1px solid var(--border-color); }
+        .report-note-form[hidden] { display: none; }
+        .report-note-form label { display: grid; gap: 6px; font-weight: 600; }
+        .report-note-form input, .report-note-form textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; font: inherit; }
+        .report-note-form textarea { resize: vertical; }
+        .report-note-form [role="status"] { color: var(--primary); }
         .public-lookup { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 20px 0; }
         .public-lookup label { display: grid; gap: 5px; font-weight: 600; }
         .public-lookup input { min-width: min(360px, 75vw); padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; }
@@ -292,6 +298,7 @@ function reportTable(title, headings, rows) {
 
 async function loadReport() {
     const form = document.getElementById('report-filters');
+    const noteForm = document.getElementById('report-note-form');
     const filters = Object.fromEntries(new FormData(form));
     const organizationSelect = form.elements.organization;
     if (currentUser.role === 'admin') {
@@ -304,9 +311,18 @@ async function loadReport() {
     }
     const report = await apiRequest({ action: 'report', ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value)) });
     window.currentReport = report;
+    noteForm.hidden = currentUser.role !== 'admin';
+    if (currentUser.role === 'admin') {
+        noteForm.elements.title.value = report.reportNote?.title || '';
+        noteForm.elements.narrative.value = report.reportNote?.narrative || '';
+    }
     const summary = report.summary;
     const container = document.getElementById('relatorio-conteudo');
+    const reportNoteHTML = report.reportNote
+        ? `<section class="report-section"><h2>${escapeHTML(report.reportNote.title)}</h2><p style="white-space: pre-wrap">${escapeHTML(report.reportNote.narrative)}</p></section>`
+        : '';
     container.innerHTML = `<div class="card-grid"><div class="card"><h3>Dinheiro recebido</h3><div class="value">${money(summary.money)}</div></div><div class="card"><h3>Horas de voluntariado</h3><div class="value">${number(summary.volunteer)} h</div></div><div class="card"><h3>Pessoas atendidas</h3><div class="value">${number(summary.people)}</div></div><div class="card"><h3>Metas concluídas</h3><div class="value">${summary.completedGoals} / ${summary.totalGoals}</div></div></div>`
+        + reportNoteHTML
         + reportTable('Projetos', ['Projeto', 'OSC', 'Indicadores', 'Recebido'], report.projects.map((item) => [item.name, item.organization, number(item.indicators), money(item.received)]))
         + reportTable('Recursos', ['Data', 'Projeto', 'Tipo', 'Quantidade', 'Apoiador', 'Uso'], report.resources.map((item) => [item.date, item.project || '—', item.type, item.type === 'Dinheiro' ? money(item.quantity) : number(item.quantity), item.supporter || '—', item.usage || '—']))
         + reportTable('Indicadores', ['Data', 'Projeto', 'Indicador', 'Meta', 'Alcançado'], report.indicators.map((item) => [item.date, item.project || '—', item.name, number(item.target), number(item.achieved)]))
@@ -405,6 +421,7 @@ function exportReportCsv() {
     const report = window.currentReport;
     if (!report) return;
     const rows = [['Seção', 'Data', 'Projeto', 'Descrição', 'Tipo', 'Meta', 'Realizado', 'Uso']];
+    if (report.reportNote) rows.push(['Relatório', `${report.filters.from} a ${report.filters.to}`, report.filters.organization || 'Todas as OSCs', report.reportNote.title, '', '', '', report.reportNote.narrative]);
     report.resources.forEach((item) => rows.push(['Recurso', item.date, item.project, item.type, item.type, '', item.quantity, item.usage]));
     report.indicators.forEach((item) => rows.push(['Indicador', item.date, item.project, item.name, '', item.target, item.achieved, '']));
     report.evidences.forEach((item) => rows.push(['Evidência', item.date, item.project, item.title, item.type, '', '', item.description]));
@@ -510,6 +527,25 @@ async function initialize() {
         });
         document.getElementById('exportar-csv').addEventListener('click', exportReportCsv);
         document.getElementById('exportar-pdf').addEventListener('click', () => window.print());
+        document.getElementById('report-note-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const noteForm = event.currentTarget;
+            const filters = Object.fromEntries(new FormData(document.getElementById('report-filters')));
+            const payload = { ...filters, ...Object.fromEntries(new FormData(noteForm)) };
+            const status = noteForm.querySelector('[role="status"]');
+            const button = noteForm.querySelector('[type="submit"]');
+            button.disabled = true;
+            status.textContent = '';
+            try {
+                await apiRequest({ action: 'save-report-note' }, { method: 'POST', body: JSON.stringify(payload) });
+                await loadReport();
+                document.getElementById('report-note-form').querySelector('[role="status"]').textContent = 'Texto do relatório salvo.';
+            } catch (error) {
+                status.textContent = error.message;
+            } finally {
+                button.disabled = false;
+            }
+        });
         return loadReport();
     }
 

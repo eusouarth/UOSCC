@@ -197,6 +197,38 @@ try {
         require_role(['admin', 'osc']);
         respond(dashboard_data($pdo, scoped_filters([])));
     }
+    if ($action === 'save-report-note' && $method === 'POST') {
+        require_role(['admin']);
+        $input = request_data();
+        $organization = trim((string) ($input['organization'] ?? ''));
+        $periodStart = trim((string) ($input['from'] ?? ''));
+        $periodEnd = trim((string) ($input['to'] ?? ''));
+        $title = trim((string) ($input['title'] ?? ''));
+        $narrative = trim((string) ($input['narrative'] ?? ''));
+        foreach ([$periodStart, $periodEnd] as $value) {
+            $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+            $errors = DateTimeImmutable::getLastErrors();
+            if (!$date || ($errors && ($errors['warning_count'] > 0 || $errors['error_count'] > 0)) || $date->format('Y-m-d') !== $value) {
+                respond(['error' => 'Informe um período válido para salvar o relatório.'], 422);
+            }
+        }
+        if ($periodStart > $periodEnd || ($organization !== '' && strlen($organization) > 200) || $title === '' || strlen($title) > 200 || $narrative === '' || strlen($narrative) > 50000) {
+            respond(['error' => 'Informe OSC, título e texto do relatório válidos para o período.'], 422);
+        }
+        if ($organization !== '') {
+            $organizationCheck = $pdo->prepare('SELECT COUNT(*) FROM projects WHERE organization = ?');
+            $organizationCheck->execute([$organization]);
+            if ((int) $organizationCheck->fetchColumn() === 0) {
+                respond(['error' => 'A OSC selecionada não possui projetos cadastrados.'], 422);
+            }
+        }
+        $saveSql = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql'
+            ? 'INSERT INTO report_notes (organization, period_start, period_end, title, narrative, author_id) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE title = VALUES(title), narrative = VALUES(narrative), author_id = VALUES(author_id), updated_at = CURRENT_TIMESTAMP'
+            : 'INSERT INTO report_notes (organization, period_start, period_end, title, narrative, author_id) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(organization, period_start, period_end) DO UPDATE SET title = excluded.title, narrative = excluded.narrative, author_id = excluded.author_id, updated_at = CURRENT_TIMESTAMP';
+        $save = $pdo->prepare($saveSql);
+        $save->execute([$organization, $periodStart, $periodEnd, $title, $narrative, current_user()['id']]);
+        respond(['saved' => true]);
+    }
     if ($action === 'report' && $method === 'GET') {
         require_role(['admin', 'osc']);
         $filters = [];
@@ -216,8 +248,15 @@ try {
         }
         $filters['organization'] = trim((string) ($_GET['organization'] ?? ''));
         $filters = scoped_filters($filters);
+        $reportNote = null;
+        if (isset($filters['from'], $filters['to'])) {
+            $noteQuery = $pdo->prepare('SELECT title, narrative, updated_at FROM report_notes WHERE organization = ? AND period_start = ? AND period_end = ?');
+            $noteQuery->execute([$filters['organization'] ?? '', $filters['from'], $filters['to']]);
+            $reportNote = $noteQuery->fetch() ?: null;
+        }
         respond([
             'filters' => $filters,
+            'reportNote' => $reportNote,
             'summary' => dashboard_data($pdo, $filters),
             'projects' => entity_rows($pdo, 'projects', $filters),
             'resources' => entity_rows($pdo, 'resources', $filters),

@@ -41,4 +41,4 @@ Abra `http://localhost:8000/` para a transparência pública ou `http://localhos
 
 A página `publico.html` não exige login. Novas evidências aceitam imagens, vídeos, áudio, texto simples e PDF de até 25 MB. O PHP precisa ter permissão de escrita em `UOSCC/uploads/evidence`; ajuste `upload_max_filesize` e `post_max_size` no `php.ini` para pelo menos `25M` e `26M`.
 
-Relatórios permitem filtrar por OSC e intervalo de datas. A opção de PDF usa a impressão do navegador (selecione “Salvar como PDF”); a planilha é exportada em CSV compatível com Excel.
+Relatórios permitem filtrar por OSC e intervalo de datas. O administrador também salva um título e uma narrativa por OSC/período, que entram na impressão/PDF e na planilha CSV. A opção de PDF usa a impressão do navegador (selecione “Salvar como PDF”); a planilha é exportada em CSV compatível com Excel.
